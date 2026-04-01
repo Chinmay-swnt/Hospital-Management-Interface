@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+// Import your other pages here
+import 'patient_page.dart';
+import 'doctor_page.dart';
+import 'appointment_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -17,7 +21,7 @@ class HomePage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildQuickActions(),
+                  _buildQuickActions(context), // Pass context for navigation
                   const SizedBox(height: 24),
                   const Text(
                     "RECENT PATIENTS",
@@ -29,7 +33,7 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildPatientList(),
+                  _buildPatientList(context), // Pass context for navigation
                 ],
               ),
             ),
@@ -39,7 +43,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // 1. Dark Blue Header with Search
+  // 1. Dark Blue Header with Search (Remains same as your code)
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
@@ -90,8 +94,8 @@ class HomePage extends StatelessWidget {
               color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Row(
-              children: const [
+            child: const Row(
+              children: [
                 Icon(Icons.search, color: Colors.white60, size: 20),
                 SizedBox(width: 10),
                 Text(
@@ -106,7 +110,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // 2. Overlapping Stats Strip
+  // 2. Overlapping Stats Strip (Remains same as your code)
   Widget _buildStatsStrip() {
     return Transform.translate(
       offset: const Offset(0, -20),
@@ -172,8 +176,8 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // 3. Quick Actions Grid (Patient Records, Doctors, etc.)
-  Widget _buildQuickActions() {
+  // 3. Quick Actions Grid - UPDATED WITH NAVIGATION
+  Widget _buildQuickActions(BuildContext context) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -183,65 +187,91 @@ class HomePage extends StatelessWidget {
       childAspectRatio: 1.4,
       children: [
         _actionCard(
+          context,
           Icons.assignment,
           "Patient records",
           "248 total",
           const Color(0xFFE1F5EE),
+          const PatientPage(), // Target Page
         ),
         _actionCard(
+          context,
           Icons.person,
           "Doctors",
           "32 on duty",
           const Color(0xFFE6F1FB),
+          const DoctorPage(), // Target Page
         ),
         _actionCard(
+          context,
           Icons.calendar_today,
           "Appointments",
           "18 today",
           const Color(0xFFFAEEDA),
+          const AppointmentPage(), // Target Page
         ),
         _actionCard(
+          context,
           Icons.star,
           "Reports",
           "3 pending",
           const Color(0xFFEEEDFE),
+          null, // No page yet
         ),
       ],
     );
   }
 
-  Widget _actionCard(IconData icon, String title, String sub, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE8ECF0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(8),
+  Widget _actionCard(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String sub,
+    Color color,
+    Widget? targetPage,
+  ) {
+    return InkWell(
+      onTap: () {
+        if (targetPage != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => targetPage),
+          );
+        }
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE8ECF0)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 20, color: Colors.black87),
             ),
-            child: Icon(icon, size: 20, color: Colors.black87),
-          ),
-          const Spacer(),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-          ),
-          Text(sub, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-        ],
+            const Spacer(),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+            Text(sub, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          ],
+        ),
       ),
     );
   }
 
-  // 4. Recent Patient List
-  Widget _buildPatientList() {
+  // 4. Recent Patient List - UPDATED WITH NAVIGATION
+  Widget _buildPatientList(BuildContext context) {
     final patients = [
       {
         'name': 'Rahul Kapoor',
@@ -262,61 +292,70 @@ class HomePage extends StatelessWidget {
     return Column(
       children: patients
           .map(
-            (p) => Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE8ECF0)),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: Colors.blue.shade50,
-                    child: Text(p['name'].toString()[0]),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          p['name'].toString(),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
+            (p) => InkWell(
+              onTap: () {
+                // You could navigate to a specific Patient Details page here
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const PatientPage()),
+                );
+              },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE8ECF0)),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.blue.shade50,
+                      child: Text(p['name'].toString()[0]),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            p['name'].toString(),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          "${p['id']} · ${p['dept']}",
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey,
+                          Text(
+                            "${p['id']} · ${p['dept']}",
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: (p['color'] as Color).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      p['status'].toString(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: p['color'] as Color,
-                        fontWeight: FontWeight.bold,
+                        ],
                       ),
                     ),
-                  ),
-                ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: (p['color'] as Color).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        p['status'].toString(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: p['color'] as Color,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           )

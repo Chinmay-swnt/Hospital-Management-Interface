@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:hospital_management_interface/pages/appointment_page.dart';
+import 'package:hospital_management_interface/pages/doctor_page.dart';
 import 'package:hospital_management_interface/pages/home_page.dart';
 
 void main() {
