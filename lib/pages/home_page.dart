@@ -1,11 +1,73 @@
 import 'package:flutter/material.dart';
-// Import your other pages here
 import 'patient_page.dart';
 import 'doctor_page.dart';
 import 'appointment_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  // Production Logic: Search Controller and Filtered List
+  final TextEditingController _searchController = TextEditingController();
+
+  // Mock Data Source
+  final List<Map<String, dynamic>> _allPatients = [
+    {
+      'name': 'Rahul Kapoor',
+      'id': '#P-0841',
+      'dept': 'Cardiology',
+      'status': 'Review',
+      'color': Colors.orange,
+    },
+    {
+      'name': 'Sanya Mehta',
+      'id': '#P-0839',
+      'dept': 'Orthopaedics',
+      'status': 'Stable',
+      'color': Colors.green,
+    },
+    {
+      'name': 'Arjun Singh',
+      'id': '#P-0912',
+      'dept': 'Neurology',
+      'status': 'Critical',
+      'color': Colors.red,
+    },
+  ];
+
+  List<Map<String, dynamic>> _filteredPatients = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredPatients = _allPatients; // Initial state
+  }
+
+  // Search Logic
+  void _runFilter(String enteredKeyword) {
+    List<Map<String, dynamic>> results = [];
+    if (enteredKeyword.isEmpty) {
+      results = _allPatients;
+    } else {
+      results = _allPatients
+          .where(
+            (user) =>
+                user["name"].toLowerCase().contains(
+                  enteredKeyword.toLowerCase(),
+                ) ||
+                user["id"].toLowerCase().contains(enteredKeyword.toLowerCase()),
+          )
+          .toList();
+    }
+
+    setState(() {
+      _filteredPatients = results;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,19 +83,32 @@ class HomePage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildQuickActions(context), // Pass context for navigation
-                  const SizedBox(height: 24),
-                  const Text(
-                    "RECENT PATIENTS",
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                      letterSpacing: 1.2,
-                    ),
+                  _buildQuickActions(context),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "RECENT PATIENTS",
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      if (_searchController.text.isNotEmpty)
+                        Text(
+                          "${_filteredPatients.length} found",
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF1B4F72),
+                          ),
+                        ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  _buildPatientList(context), // Pass context for navigation
+                  const SizedBox(height: 16),
+                  _buildPatientList(context),
                 ],
               ),
             ),
@@ -43,11 +118,17 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // 1. Dark Blue Header with Search (Remains same as your code)
+  // 1. Functional Header with Working Search
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
-      decoration: const BoxDecoration(color: Color(0xFF1B4F72)),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1B4F72),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
       child: Column(
         children: [
           Row(
@@ -57,7 +138,7 @@ class HomePage extends StatelessWidget {
                 TextSpan(
                   text: 'Medi',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -69,14 +150,9 @@ class HomePage extends StatelessWidget {
                   ],
                 ),
               ),
-              Container(
-                width: 38,
-                height: 38,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF7EC8E3),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
+              CircleAvatar(
+                backgroundColor: const Color(0xFF7EC8E3),
+                radius: 19,
                 child: const Text(
                   "DR",
                   style: TextStyle(
@@ -87,22 +163,33 @@ class HomePage extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 25),
+          // PRODUCTION SEARCH BAR
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: const Row(
-              children: [
-                Icon(Icons.search, color: Colors.white60, size: 20),
-                SizedBox(width: 10),
-                Text(
-                  "Search patients, records...",
-                  style: TextStyle(color: Colors.white60),
-                ),
-              ],
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) => _runFilter(value),
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: "Search patients by name or ID...",
+                hintStyle: const TextStyle(color: Colors.white60, fontSize: 14),
+                prefixIcon: const Icon(Icons.search, color: Colors.white60),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.white60),
+                        onPressed: () {
+                          _searchController.clear();
+                          _runFilter('');
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
             ),
           ),
         ],
@@ -110,7 +197,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // 2. Overlapping Stats Strip (Remains same as your code)
+  // 2. Overlapping Stats Strip
   Widget _buildStatsStrip() {
     return Transform.translate(
       offset: const Offset(0, -20),
@@ -145,9 +232,13 @@ class HomePage extends StatelessWidget {
         padding: const EdgeInsets.all(15),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Column(
@@ -165,6 +256,7 @@ class HomePage extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 9,
+                fontWeight: FontWeight.w600,
                 color: isAccent
                     ? const Color(0xFF1B4F72).withOpacity(0.7)
                     : Colors.white60,
@@ -176,7 +268,6 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // 3. Quick Actions Grid - UPDATED WITH NAVIGATION
   Widget _buildQuickActions(BuildContext context) {
     return GridView.count(
       shrinkWrap: true,
@@ -184,31 +275,31 @@ class HomePage extends StatelessWidget {
       crossAxisCount: 2,
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
-      childAspectRatio: 1.4,
+      childAspectRatio: 1.5,
       children: [
         _actionCard(
           context,
-          Icons.assignment,
+          Icons.assignment_rounded,
           "Patient records",
           "248 total",
           const Color(0xFFE1F5EE),
-          const PatientPage(), // Target Page
+          const PatientPage(),
         ),
         _actionCard(
           context,
-          Icons.person,
+          Icons.person_search_rounded,
           "Doctors",
           "32 on duty",
           const Color(0xFFE6F1FB),
-          const DoctorPage(), // Target Page
+          const DoctorPage(),
         ),
         _actionCard(
           context,
-          Icons.calendar_today,
+          Icons.calendar_month_rounded,
           "Appointments",
           "18 today",
           const Color(0xFFFAEEDA),
-          const AppointmentPage(), // Target Page
+          const AppointmentPage(),
         ),
       ],
     );
@@ -220,138 +311,134 @@ class HomePage extends StatelessWidget {
     String title,
     String sub,
     Color color,
-    Widget? targetPage,
+    Widget target,
   ) {
     return InkWell(
-      onTap: () {
-        if (targetPage != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => targetPage),
-          );
-        }
-      },
-      borderRadius: BorderRadius.circular(14),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => target),
+      ),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: const Color(0xFFE8ECF0)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, size: 20, color: Colors.black87),
+              child: Icon(icon, size: 22, color: const Color(0xFF1B4F72)),
             ),
             const Spacer(),
             Text(
               title,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
             ),
-            Text(sub, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+            const SizedBox(height: 2),
+            Text(sub, style: const TextStyle(fontSize: 11, color: Colors.grey)),
           ],
         ),
       ),
     );
   }
 
-  // 4. Recent Patient List - UPDATED WITH NAVIGATION
   Widget _buildPatientList(BuildContext context) {
-    final patients = [
-      {
-        'name': 'Rahul Kapoor',
-        'id': '#P-0841',
-        'dept': 'Cardiology',
-        'status': 'Review',
-        'color': Colors.orange,
-      },
-      {
-        'name': 'Sanya Mehta',
-        'id': '#P-0839',
-        'dept': 'Orthopaedics',
-        'status': 'Stable',
-        'color': Colors.green,
-      },
-    ];
+    if (_filteredPatients.isEmpty) {
+      return Center(
+        child: Column(
+          children: [
+            const SizedBox(height: 40),
+            Icon(
+              Icons.search_off_rounded,
+              size: 48,
+              color: Colors.grey.shade300,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "No patients found matching your search",
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+          ],
+        ),
+      );
+    }
 
-    return Column(
-      children: patients
-          .map(
-            (p) => InkWell(
-              onTap: () {
-                // You could navigate to a specific Patient Details page here
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const PatientPage()),
-                );
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE8ECF0)),
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _filteredPatients.length,
+      itemBuilder: (context, index) {
+        final p = _filteredPatients[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE8ECF0)),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: const Color(0xFFE6F1FB),
+                child: Text(
+                  p['name'][0],
+                  style: const TextStyle(
+                    color: Color(0xFF1B4F72),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                child: Row(
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.blue.shade50,
-                      child: Text(p['name'].toString()[0]),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            p['name'].toString(),
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            "${p['id']} · ${p['dept']}",
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
+                    Text(
+                      p['name'],
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: (p['color'] as Color).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        p['status'].toString(),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: p['color'] as Color,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "${p['id']} · ${p['dept']}",
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
                     ),
                   ],
                 ),
               ),
-            ),
-          )
-          .toList(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: (p['color'] as Color).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  p['status'],
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: p['color'],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class AppointmentPage extends StatefulWidget {
   const AppointmentPage({super.key});
@@ -8,20 +9,36 @@ class AppointmentPage extends StatefulWidget {
 }
 
 class _AppointmentPageState extends State<AppointmentPage> {
-  int selectedDateIndex = 2;
-  String selectedTime = "10:30 AM";
+  int selectedDateIndex = 0;
+  String? selectedTime;
   String selectedPatient = "Rahul Kapoor";
-  bool isBooking = false; // Production: Handle loading state
+  // Added: State to track the selected doctor
+  String selectedDoctor = "Dr. Sneha Gupta";
+  bool isBooking = false;
 
-  // Production: Define which slots are already taken
+  final TextEditingController _reasonController = TextEditingController();
+  final ScrollController _dateScrollController = ScrollController();
+
   final List<Map<String, dynamic>> timeSlots = [
-    {"time": "9:00 AM", "isBooked": false},
+    {"time": "09:00 AM", "isBooked": false},
     {"time": "10:30 AM", "isBooked": false},
-    {"time": "12:00 PM", "isBooked": true}, // Already taken
-    {"time": "2:00 PM", "isBooked": false},
-    {"time": "3:30 PM", "isBooked": false},
-    {"time": "4:00 PM", "isBooked": false},
+    {"time": "12:00 PM", "isBooked": true},
+    {"time": "02:00 PM", "isBooked": false},
+    {"time": "03:30 PM", "isBooked": false},
+    {"time": "04:30 PM", "isBooked": false},
   ];
+
+  final List<DateTime> availableDates = List.generate(
+    14,
+    (index) => DateTime.now().add(Duration(days: index)),
+  );
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    _dateScrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +57,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          "Schedule",
+          "Book Appointment",
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -58,30 +75,19 @@ class _AppointmentPageState extends State<AppointmentPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildBookingCard(),
+                  const SizedBox(height: 24),
+                  _buildSectionHeader("REASON FOR VISIT"),
+                  const SizedBox(height: 12),
+                  _buildReasonField(),
                   const SizedBox(height: 32),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "AVAILABLE SLOTS · APRIL ${selectedDateIndex + 1}",
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                          letterSpacing: 1.1,
-                        ),
-                      ),
-                      const Icon(
-                        Icons.info_outline,
-                        size: 14,
-                        color: Colors.grey,
-                      ),
-                    ],
+                  _buildSectionHeader(
+                    "AVAILABLE SLOTS · ${DateFormat('MMMM dd').format(availableDates[selectedDateIndex]).toUpperCase()}",
                   ),
                   const SizedBox(height: 16),
                   _buildTimeGrid(),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 40),
                   _buildSubmitButton(),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -91,45 +97,50 @@ class _AppointmentPageState extends State<AppointmentPage> {
     );
   }
 
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+        color: Colors.grey,
+        letterSpacing: 1.1,
+      ),
+    );
+  }
+
   Widget _buildDateSelector() {
     return Container(
       color: const Color(0xFF1B4F72),
       padding: const EdgeInsets.only(bottom: 24, top: 8),
       child: SingleChildScrollView(
+        controller: _dateScrollController,
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 15),
         child: Row(
-          children: List.generate(14, (index) {
+          children: List.generate(availableDates.length, (index) {
+            DateTime date = availableDates[index];
             bool isSelected = selectedDateIndex == index;
             return GestureDetector(
               onTap: () => setState(() => selectedDateIndex = index),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
+                duration: const Duration(milliseconds: 250),
                 margin: const EdgeInsets.symmetric(horizontal: 6),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 14,
+                  horizontal: 16,
+                  vertical: 12,
                 ),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? const Color(0xFF7EC8E3)
                       : Colors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ]
-                      : null,
                 ),
                 child: Column(
                   children: [
                     Text(
-                      "Apr",
+                      DateFormat('MMM').format(date),
                       style: TextStyle(
                         color: isSelected
                             ? const Color(0xFF1B4F72)
@@ -142,7 +153,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "${index + 1}",
+                      date.day.toString(),
                       style: TextStyle(
                         color: isSelected
                             ? const Color(0xFF1B4F72)
@@ -169,11 +180,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE8ECF0)),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
         ],
       ),
       child: Column(
@@ -188,7 +195,13 @@ class _AppointmentPageState extends State<AppointmentPage> {
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Divider(height: 1, thickness: 0.5, color: Color(0xFFE8ECF0)),
           ),
-          _rowItem("Doctor", "Dr. Sneha Gupta", isAction: false),
+          // Updated: Doctor row is now an action that triggers the picker
+          _rowItem(
+            "Doctor",
+            selectedDoctor,
+            isAction: true,
+            onTap: _showDoctorPicker,
+          ),
         ],
       ),
     );
@@ -202,38 +215,57 @@ class _AppointmentPageState extends State<AppointmentPage> {
   }) {
     return InkWell(
       onTap: onTap,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(color: Colors.grey, fontSize: 14),
             ),
-          ),
-          Row(
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  color: isAction ? const Color(0xFF1B4F72) : Colors.black87,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+            Row(
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-              if (isAction) ...[
-                const SizedBox(width: 4),
-                const Icon(
-                  Icons.keyboard_arrow_down,
-                  size: 18,
-                  color: Color(0xFF1B4F72),
-                ),
+                if (isAction)
+                  const Icon(
+                    Icons.keyboard_arrow_right,
+                    size: 18,
+                    color: Colors.grey,
+                  ),
               ],
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReasonField() {
+    return TextField(
+      controller: _reasonController,
+      maxLines: 3,
+      decoration: InputDecoration(
+        hintText: "Briefly describe your symptoms...",
+        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+        fillColor: Colors.white,
+        filled: true,
+        contentPadding: const EdgeInsets.all(16),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFE8ECF0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF1B4F72)),
+        ),
       ),
     );
   }
@@ -245,15 +277,12 @@ class _AppointmentPageState extends State<AppointmentPage> {
       children: timeSlots.map((slot) {
         bool isBooked = slot['isBooked'];
         bool isSelected = selectedTime == slot['time'];
-
         return GestureDetector(
           onTap: isBooked
               ? null
               : () => setState(() => selectedTime = slot['time']),
           child: Container(
-            width:
-                (MediaQuery.of(context).size.width - 64) /
-                3, // Perfect 3-column grid
+            width: (MediaQuery.of(context).size.width - 64) / 3,
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
               color: isBooked
@@ -284,14 +313,16 @@ class _AppointmentPageState extends State<AppointmentPage> {
   }
 
   Widget _buildSubmitButton() {
+    bool canSubmit = selectedTime != null && !isBooking;
+
     return SizedBox(
       width: double.infinity,
       height: 56,
       child: ElevatedButton(
-        onPressed: isBooking ? null : _handleBooking,
+        onPressed: canSubmit ? _handleBooking : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF1B4F72),
-          elevation: 2,
+          disabledBackgroundColor: Colors.grey.shade300,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -306,11 +337,10 @@ class _AppointmentPageState extends State<AppointmentPage> {
                 ),
               )
             : const Text(
-                "Confirm Appointment",
+                "Confirm & Pay",
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
                 ),
               ),
       ),
@@ -319,27 +349,29 @@ class _AppointmentPageState extends State<AppointmentPage> {
 
   void _handleBooking() async {
     setState(() => isBooking = true);
-    // Simulating API call
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
     setState(() => isBooking = false);
     _showSuccessDialog();
   }
 
+  // Picker for selecting the patient
   void _showPatientPicker() {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
+      builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: ["Rahul Kapoor", "Sanya Mehta", "Arjun Singh"]
+          children: ["Rahul Kapoor", "Sanya Mehta", "Self"]
               .map(
                 (name) => ListTile(
                   title: Text(name),
+                  trailing: selectedPatient == name
+                      ? const Icon(Icons.check, color: Color(0xFF1B4F72))
+                      : null,
                   onTap: () {
                     setState(() => selectedPatient = name);
                     Navigator.pop(context);
@@ -347,6 +379,44 @@ class _AppointmentPageState extends State<AppointmentPage> {
                 ),
               )
               .toList(),
+        ),
+      ),
+    );
+  }
+
+  // Added: Picker for selecting the doctor
+  void _showDoctorPicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                "Select Doctor",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+            ...["Dr. Sneha Gupta", "Dr. Rahul Sharma", "Dr. Ananya Iyer"]
+                .map(
+                  (name) => ListTile(
+                    title: Text(name),
+                    trailing: selectedDoctor == name
+                        ? const Icon(Icons.check, color: Color(0xFF1B4F72))
+                        : null,
+                    onTap: () {
+                      setState(() => selectedDoctor = name);
+                      Navigator.pop(context);
+                    },
+                  ),
+                )
+                .toList(),
+          ],
         ),
       ),
     );
@@ -361,41 +431,25 @@ class _AppointmentPageState extends State<AppointmentPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.check_circle_rounded,
-              color: Colors.green,
-              size: 80,
-            ),
+            const Icon(Icons.check_circle, color: Colors.green, size: 64),
             const SizedBox(height: 16),
             const Text(
-              "Success!",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              "Booking Confirmed",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             const SizedBox(height: 8),
             Text(
-              "Appointment confirmed for $selectedPatient with Dr. Sneha Gupta on April ${selectedDateIndex + 1} at $selectedTime.",
+              "Your visit with $selectedDoctor is scheduled for ${DateFormat('MMM dd').format(availableDates[selectedDateIndex])} at $selectedTime.",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600),
+              style: const TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Pop dialog
-                  Navigator.pop(context); // Back to Home
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1B4F72),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  "Back to Home",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              child: const Text("Done"),
             ),
           ],
         ),
