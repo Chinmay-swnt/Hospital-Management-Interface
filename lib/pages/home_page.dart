@@ -210,14 +210,6 @@ class HomePage extends StatelessWidget {
           const Color(0xFFFAEEDA),
           const AppointmentPage(), // Target Page
         ),
-        _actionCard(
-          context,
-          Icons.star,
-          "Reports",
-          "3 pending",
-          const Color(0xFFEEEDFE),
-          null, // No page yet
-        ),
       ],
     );
   }
