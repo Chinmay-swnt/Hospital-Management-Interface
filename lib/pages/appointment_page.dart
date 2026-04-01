@@ -1,6 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
+// ----------------------------------------------------------------
+// MODEL
+// ----------------------------------------------------------------
+class Appointment {
+  final String doctorName;
+  final String specialty;
+  final String time;
+  final String patientInfo;
+  final String location;
+  final Color timeBg;
+  final Color timeColor;
+
+  Appointment({
+    required this.doctorName,
+    required this.specialty,
+    required this.time,
+    required this.patientInfo,
+    required this.location,
+    this.timeBg = const Color(0xFFE3F2FD),
+    this.timeColor = const Color(0xFF1B4F72),
+  });
+}
+
+// ----------------------------------------------------------------
+// PAGE
+// ----------------------------------------------------------------
 class AppointmentPage extends StatefulWidget {
   const AppointmentPage({super.key});
 
@@ -9,451 +34,513 @@ class AppointmentPage extends StatefulWidget {
 }
 
 class _AppointmentPageState extends State<AppointmentPage> {
-  int selectedDateIndex = 0;
-  String? selectedTime;
-  String selectedPatient = "Rahul Kapoor";
-  // Added: State to track the selected doctor
+  // Theme Constants
+  static const Color primaryNavy = Color(0xFF1B4F72);
+  static const Color accentBlue = Color(0xFF7EC8E3);
+  static const Color backgroundGray = Color(0xFFF5F7FA);
+
+  int selectedDateIndex = 1;
+  String? selectedTime = "10:30 AM";
+  String selectedPatient = "Select patient...";
   String selectedDoctor = "Dr. Sneha Gupta";
-  bool isBooking = false;
 
-  final TextEditingController _reasonController = TextEditingController();
-  final ScrollController _dateScrollController = ScrollController();
-
-  final List<Map<String, dynamic>> timeSlots = [
-    {"time": "09:00 AM", "isBooked": false},
-    {"time": "10:30 AM", "isBooked": false},
-    {"time": "12:00 PM", "isBooked": true},
-    {"time": "02:00 PM", "isBooked": false},
-    {"time": "03:30 PM", "isBooked": false},
-    {"time": "04:30 PM", "isBooked": false},
+  final List<Map<String, String>> dates = [
+    {"day": "MON", "num": "31"},
+    {"day": "TUE", "num": "1"},
+    {"day": "WED", "num": "2"},
+    {"day": "THU", "num": "3"},
+    {"day": "FRI", "num": "4"},
+    {"day": "SAT", "num": "5"},
   ];
 
-  final List<DateTime> availableDates = List.generate(
-    14,
-    (index) => DateTime.now().add(Duration(days: index)),
-  );
+  final List<String> timeSlots = [
+    "9:00 AM",
+    "10:30 AM",
+    "2:00 PM",
+    "3:30 PM",
+    "4:00 PM",
+    "Booked",
+  ];
 
-  @override
-  void dispose() {
-    _reasonController.dispose();
-    _dateScrollController.dispose();
-    super.dispose();
+  // Logic: Success Dialog
+  void _handleBookAppointment() {
+    if (selectedPatient == "Select patient...") {
+      _showToast("Please select a patient first", isError: true);
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Column(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 48),
+            SizedBox(height: 16),
+            Text("Success"),
+          ],
+        ),
+        content: Text(
+          "Appointment scheduled with $selectedDoctor at $selectedTime",
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              "OK",
+              style: TextStyle(fontWeight: FontWeight.bold, color: primaryNavy),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showToast(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.redAccent : primaryNavy,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1B4F72),
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            size: 20,
-            color: Colors.white,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          "Book Appointment",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
+      backgroundColor: backgroundGray,
+      appBar: _buildAppBar(),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDateStrip(),
+            _buildSectionLabel("TODAY · APRIL 1"),
+            _buildUpcomingCard(
+              Appointment(
+                doctorName: "Dr. Ananya Sharma",
+                specialty: "Cardiology · Follow-up",
+                time: "09:30 AM",
+                patientInfo: "Rahul Kapoor · ID #P-0841",
+                location: "Room 204 · Ward B",
+              ),
+            ),
+            _buildSectionLabel("SCHEDULE NEW APPOINTMENT"),
+            _buildScheduleSection(),
+            const SizedBox(height: 32),
+          ],
         ),
       ),
-      body: Column(
-        children: [
-          _buildDateSelector(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+    );
+  }
+
+  // --- UI Components ---
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: primaryNavy,
+      elevation: 0,
+      title: const Text(
+        "Appointments",
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateStrip() {
+    return Container(
+      color: primaryNavy,
+      height: 100,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        itemCount: dates.length,
+        itemBuilder: (context, index) {
+          final isSelected = selectedDateIndex == index;
+          return GestureDetector(
+            onTap: () => setState(() => selectedDateIndex = index),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 60,
+              margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Colors.white.withOpacity(0.15)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildBookingCard(),
-                  const SizedBox(height: 24),
-                  _buildSectionHeader("REASON FOR VISIT"),
-                  const SizedBox(height: 12),
-                  _buildReasonField(),
-                  const SizedBox(height: 32),
-                  _buildSectionHeader(
-                    "AVAILABLE SLOTS · ${DateFormat('MMMM dd').format(availableDates[selectedDateIndex]).toUpperCase()}",
+                  Text(
+                    dates[index]['day']!,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.white60,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  _buildTimeGrid(),
-                  const SizedBox(height: 40),
-                  _buildSubmitButton(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 4),
+                  Text(
+                    dates[index]['num']!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (isSelected)
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      width: 4,
+                      height: 4,
+                      decoration: const BoxDecoration(
+                        color: accentBlue,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                 ],
               ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.bold,
-        color: Colors.grey,
-        letterSpacing: 1.1,
-      ),
-    );
-  }
-
-  Widget _buildDateSelector() {
+  Widget _buildUpcomingCard(Appointment apt) {
     return Container(
-      color: const Color(0xFF1B4F72),
-      padding: const EdgeInsets.only(bottom: 24, top: 8),
-      child: SingleChildScrollView(
-        controller: _dateScrollController,
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 15),
-        child: Row(
-          children: List.generate(availableDates.length, (index) {
-            DateTime date = availableDates[index];
-            bool isSelected = selectedDateIndex == index;
-            return GestureDetector(
-              onTap: () => setState(() => selectedDateIndex = index),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                margin: const EdgeInsets.symmetric(horizontal: 6),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF7EC8E3)
-                      : Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      DateFormat('MMM').format(date),
-                      style: TextStyle(
-                        color: isSelected
-                            ? const Color(0xFF1B4F72)
-                            : Colors.white60,
-                        fontSize: 11,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      date.day.toString(),
-                      style: TextStyle(
-                        color: isSelected
-                            ? const Color(0xFF1B4F72)
-                            : Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBookingCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE8ECF0)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
         children: [
-          _rowItem(
-            "Patient",
-            selectedPatient,
-            isAction: true,
-            onTap: _showPatientPicker,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    apt.doctorName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  Text(
+                    apt.specialty,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: apt.timeBg,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  apt.time,
+                  style: TextStyle(
+                    color: apt.timeColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Divider(height: 1, thickness: 0.5, color: Color(0xFFE8ECF0)),
-          ),
-          // Updated: Doctor row is now an action that triggers the picker
-          _rowItem(
-            "Doctor",
-            selectedDoctor,
-            isAction: true,
-            onTap: _showDoctorPicker,
+          const Divider(height: 32, color: Color(0xFFF0F0F0)),
+          _buildInfoRow(Icons.person_outline, apt.patientInfo),
+          const SizedBox(height: 8),
+          _buildInfoRow(Icons.location_on_outlined, apt.location),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionBtn(
+                  "Confirm",
+                  primaryNavy,
+                  Colors.white,
+                  () => _showToast("Confirmed!"),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildActionBtn(
+                  "Reschedule",
+                  backgroundGray,
+                  Colors.grey,
+                  () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (date != null)
+                      _showToast("Rescheduled to ${date.day}/${date.month}");
+                  },
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _rowItem(
-    String label,
-    String value, {
-    required bool isAction,
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-            Row(
-              children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-                if (isAction)
-                  const Icon(
-                    Icons.keyboard_arrow_right,
-                    size: 18,
-                    color: Colors.grey,
-                  ),
-              ],
-            ),
-          ],
-        ),
+  Widget _buildScheduleSection() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE8ECF0)),
       ),
-    );
-  }
-
-  Widget _buildReasonField() {
-    return TextField(
-      controller: _reasonController,
-      maxLines: 3,
-      decoration: InputDecoration(
-        hintText: "Briefly describe your symptoms...",
-        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-        fillColor: Colors.white,
-        filled: true,
-        contentPadding: const EdgeInsets.all(16),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFFE8ECF0)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF1B4F72)),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTimeGrid() {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: timeSlots.map((slot) {
-        bool isBooked = slot['isBooked'];
-        bool isSelected = selectedTime == slot['time'];
-        return GestureDetector(
-          onTap: isBooked
-              ? null
-              : () => setState(() => selectedTime = slot['time']),
-          child: Container(
-            width: (MediaQuery.of(context).size.width - 64) / 3,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: isBooked
-                  ? Colors.grey.shade100
-                  : (isSelected ? const Color(0xFF1B4F72) : Colors.white),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected
-                    ? const Color(0xFF1B4F72)
-                    : const Color(0xFFE8ECF0),
-              ),
-            ),
-            child: Text(
-              isBooked ? "Booked" : slot['time'],
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: isBooked
-                    ? Colors.grey
-                    : (isSelected ? Colors.white : Colors.black87),
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              ),
-            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildLabel("PATIENT"),
+          _buildSelectionField(
+            selectedPatient,
+            () => _showPicker("Select Patient", [
+              "Rahul Kapoor",
+              "Arjun Joshi",
+              "Sanya Iyer",
+            ], (v) => setState(() => selectedPatient = v)),
           ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildSubmitButton() {
-    bool canSubmit = selectedTime != null && !isBooking;
-
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: canSubmit ? _handleBooking : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1B4F72),
-          disabledBackgroundColor: Colors.grey.shade300,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+          const SizedBox(height: 16),
+          _buildLabel("DOCTOR"),
+          _buildSelectionField(
+            selectedDoctor,
+            () => _showPicker("Select Doctor", [
+              "Dr. Sneha Gupta",
+              "Dr. Rahul Sharma",
+              "Dr. Ananya Iyer",
+            ], (v) => setState(() => selectedDoctor = v)),
           ),
-        ),
-        child: isBooking
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
+          const SizedBox(height: 20),
+          _buildLabel("AVAILABLE SLOTS · APRIL 2"),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: timeSlots.map((t) => _buildSlotChip(t)).toList(),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _handleBookAppointment,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryNavy,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              )
-            : const Text(
-                "Confirm & Pay",
+                elevation: 0,
+              ),
+              child: const Text(
+                "Schedule Appointment",
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
+                  fontSize: 14,
                 ),
               ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  void _handleBooking() async {
-    setState(() => isBooking = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-    setState(() => isBooking = false);
-    _showSuccessDialog();
-  }
+  // --- Helpers ---
 
-  // Picker for selecting the patient
-  void _showPatientPicker() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ["Rahul Kapoor", "Sanya Mehta", "Self"]
-              .map(
-                (name) => ListTile(
-                  title: Text(name),
-                  trailing: selectedPatient == name
-                      ? const Icon(Icons.check, color: Color(0xFF1B4F72))
-                      : null,
-                  onTap: () {
-                    setState(() => selectedPatient = name);
-                    Navigator.pop(context);
-                  },
-                ),
-              )
-              .toList(),
+  Widget _buildSlotChip(String t) {
+    final isBooked = t == "Booked";
+    final isSelected = selectedTime == t;
+    return GestureDetector(
+      onTap: isBooked ? null : () => setState(() => selectedTime = t),
+      child: Container(
+        width: (MediaQuery.of(context).size.width - 100) / 3,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? primaryNavy
+              : (isBooked ? const Color(0xFFF5F5F5) : Colors.white),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? primaryNavy : const Color(0xFFE8ECF0),
+          ),
+        ),
+        child: Center(
+          child: Text(
+            t,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: isSelected
+                  ? Colors.white
+                  : (isBooked ? Colors.grey : Colors.black87),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  // Added: Picker for selecting the doctor
-  void _showDoctorPicker() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text(
-                "Select Doctor",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ),
-            ...["Dr. Sneha Gupta", "Dr. Rahul Sharma", "Dr. Ananya Iyer"]
-                .map(
-                  (name) => ListTile(
-                    title: Text(name),
-                    trailing: selectedDoctor == name
-                        ? const Icon(Icons.check, color: Color(0xFF1B4F72))
-                        : null,
-                    onTap: () {
-                      setState(() => selectedDoctor = name);
-                      Navigator.pop(context);
-                    },
-                  ),
-                )
-                .toList(),
-          ],
+  Widget _buildSectionLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey,
+          letterSpacing: 1.1,
         ),
       ),
     );
   }
 
-  void _showSuccessDialog() {
-    showDialog(
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.blue.shade700),
+        const SizedBox(width: 8),
+        Text(text, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+      ],
+    );
+  }
+
+  Widget _buildActionBtn(
+    String title,
+    Color bg,
+    Color text,
+    VoidCallback onTap,
+  ) {
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 44,
+          alignment: Alignment.center,
+          child: Text(
+            title,
+            style: TextStyle(
+              color: text,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showPicker(
+    String title,
+    List<String> options,
+    Function(String) onSelect,
+  ) {
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        content: Column(
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 64),
-            const SizedBox(height: 16),
-            const Text(
-              "Booking Confirmed",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            const SizedBox(height: 8),
             Text(
-              "Your visit with $selectedDoctor is scheduled for ${DateFormat('MMM dd').format(availableDates[selectedDateIndex])} at $selectedTime.",
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey),
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              child: const Text("Done"),
+            const Divider(),
+            ...options.map(
+              (opt) => ListTile(
+                title: Text(opt),
+                onTap: () {
+                  onSelect(opt);
+                  Navigator.pop(context);
+                },
+              ),
             ),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildSelectionField(String value, VoidCallback onTap) =>
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: backgroundGray,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(color: Colors.black87, fontSize: 13),
+              ),
+              const Icon(
+                Icons.keyboard_arrow_down,
+                color: Colors.grey,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _buildLabel(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.bold,
+        color: Colors.grey,
+        letterSpacing: 0.5,
+      ),
+    ),
+  );
 }
